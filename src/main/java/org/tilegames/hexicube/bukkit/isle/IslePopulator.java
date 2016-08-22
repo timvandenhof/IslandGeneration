@@ -3,17 +3,17 @@ package org.tilegames.hexicube.bukkit.isle;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 
-import net.minecraft.server.v1_8_R3.Block;
-import net.minecraft.server.v1_8_R3.BlockPosition;
-import net.minecraft.server.v1_8_R3.ChunkCoordIntPair;
-import net.minecraft.server.v1_8_R3.ChunkSection;
-import net.minecraft.server.v1_8_R3.NBTTagCompound;
-import net.minecraft.server.v1_8_R3.TileEntity;
-import net.minecraft.server.v1_8_R3.TileEntityChest;
-import net.minecraft.server.v1_8_R3.TileEntityMobSpawner;
+import net.minecraft.server.v1_9_R2.Block;
+import net.minecraft.server.v1_9_R2.BlockPosition;
+import net.minecraft.server.v1_9_R2.ChunkSection;
+import net.minecraft.server.v1_9_R2.NBTTagCompound;
+import net.minecraft.server.v1_9_R2.PacketPlayOutMapChunk;
+import net.minecraft.server.v1_9_R2.PlayerConnection;
+import net.minecraft.server.v1_9_R2.TileEntity;
+import net.minecraft.server.v1_9_R2.TileEntityChest;
+import net.minecraft.server.v1_9_R2.TileEntityMobSpawner;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -21,10 +21,10 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
-import org.bukkit.craftbukkit.v1_8_R3.CraftChunk;
-import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_9_R2.CraftChunk;
+import org.bukkit.craftbukkit.v1_9_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_9_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_9_R2.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.BlockPopulator;
@@ -33,7 +33,7 @@ import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 
 public class IslePopulator extends BlockPopulator
 {
-	private ArrayList<net.minecraft.server.v1_8_R3.Chunk> chunksToReload;
+	private ArrayList<net.minecraft.server.v1_9_R2.Chunk> chunksToReload;
 	private UsedSections lastUsedSections;
 	
 	public static ArrayList<Schematic> schematics;
@@ -48,17 +48,31 @@ public class IslePopulator extends BlockPopulator
 	
 	private void sendChunkToClient(Chunk chunk, Player player)
 	{
-		ChunkCoordIntPair ccip = new ChunkCoordIntPair(chunk.getX(), chunk.getZ());
 		for(Player p: chunk.getWorld().getPlayers())
 		{
 			int playerChunkX = p.getLocation().getBlockX() >> 4;
 			int playerChunkZ = p.getLocation().getBlockZ() >> 4;
+			
 			int dist = Math.min(Math.abs(playerChunkX-chunk.getX()), Math.abs(playerChunkZ-chunk.getZ()));
 			if(dist <= Bukkit.getServer().getViewDistance())
 			{
-				List<ChunkCoordIntPair> chunkCoordIntPairQueue = (List<ChunkCoordIntPair>)((CraftPlayer)p).getHandle().chunkCoordIntPairQueue;
-				if(!chunkCoordIntPairQueue.contains(ccip))
-				chunkCoordIntPairQueue.add(ccip);
+				// BEGIN - experimental stuff that is not working great
+				PlayerConnection connection = ((CraftPlayer) player).getHandle().playerConnection;
+				
+				for (int cz = playerChunkZ - dist; cz <= playerChunkZ + dist; cz++) {					
+		            if (chunk == null || !chunk.isLoaded())
+		            {
+		            	//The client doesn't know about it yet		            	
+		            	net.minecraft.server.v1_9_R2.Chunk playerChunk = ((CraftChunk) chunk).getHandle();
+		        		
+		        		if(playerChunk != null && playerChunk.isReady())
+		        		{
+		        			PacketPlayOutMapChunk packet = new PacketPlayOutMapChunk(playerChunk, 0xffff);
+		        			connection.sendPacket(packet);
+		        		}
+		            }
+	            }
+				// END
 			}
 		}
 	}
@@ -215,7 +229,7 @@ public class IslePopulator extends BlockPopulator
 		   lastUsedSections.chunkZ == z>>4) usedSections = lastUsedSections;
 		if(usedSections == null)
 		{
-			net.minecraft.server.v1_8_R3.Chunk chunk = ((CraftChunk)c).getHandle();
+			net.minecraft.server.v1_9_R2.Chunk chunk = ((CraftChunk)c).getHandle();
 			chunksToReload.add(chunk);
 			Field f = null;
 			try
@@ -1392,7 +1406,7 @@ public class IslePopulator extends BlockPopulator
 				TileEntityMobSpawner t = new TileEntityMobSpawner();
 				t.a(new BlockPosition(position[0], position[1]+1, position[2]));
 				NBTTagCompound data = new NBTTagCompound();
-				t.b(data);
+				t.save(data);
 				int val = rand.nextInt(25);
 				if(val < 7) data.setString("EntityId", "Skeleton");
 				else if(val < 14) data.setString("EntityId", "Zombie");
@@ -1558,7 +1572,7 @@ public class IslePopulator extends BlockPopulator
 	{
 		if((chunk.getX()%(IslandWorldGeneration.islandSpacing*2) != 0 || chunk.getZ()%(IslandWorldGeneration.islandSpacing*2) != 0) &&
 		   (Math.abs(chunk.getX())%(IslandWorldGeneration.islandSpacing*2) != IslandWorldGeneration.islandSpacing || Math.abs(chunk.getZ())%(IslandWorldGeneration.islandSpacing*2) != IslandWorldGeneration.islandSpacing)) return;
-		chunksToReload = new ArrayList<net.minecraft.server.v1_8_R3.Chunk>();
+		chunksToReload = new ArrayList<net.minecraft.server.v1_9_R2.Chunk>();
 		boolean sandEdges = rand.nextInt(10) < 3;
 		boolean flatIsland = rand.nextInt(17) < 5;
 		boolean islandValidSpawn = false;
@@ -1580,7 +1594,7 @@ public class IslePopulator extends BlockPopulator
 			else if(pos == 4) islandType = Biome.JUNGLE;
 			else if(pos == 5) islandType = Biome.DESERT;
 			else if(pos == 6) islandType = Biome.EXTREME_HILLS;
-			else if(pos == 7) islandType = Biome.SMALL_MOUNTAINS;
+			else if(pos == 7) islandType = Biome.SMALLER_EXTREME_HILLS;
 			else if(pos == 8) islandType = Biome.MUSHROOM_ISLAND;
 			else if(pos == 9) islandType = Biome.OCEAN;
 			else if(pos == 10) return;
@@ -1722,7 +1736,7 @@ public class IslePopulator extends BlockPopulator
 										TileEntityMobSpawner t = new TileEntityMobSpawner();
 										t.a(new BlockPosition(blockX, blockY, blockZ));
 										NBTTagCompound data = new NBTTagCompound();
-										t.b(data);
+										t.save(data);
 										data.setString("EntityId", "PigZombie");
 										data.setShort("RequiredPlayerRange", (short)64);
 										t.a(data);
@@ -1759,7 +1773,7 @@ public class IslePopulator extends BlockPopulator
 									TileEntityMobSpawner t = new TileEntityMobSpawner();
 									t.a(new BlockPosition(blockX, blockY, blockZ));
 									NBTTagCompound data = new NBTTagCompound();
-									t.b(data);
+									t.save(data);
 									data.setString("EntityId", "PigZombie");
 									data.setShort("RequiredPlayerRange", (short)64);
 									t.a(data);
@@ -1767,7 +1781,7 @@ public class IslePopulator extends BlockPopulator
 								}
 								else setBlock(world, blockX, blockY, blockZ, Material.NETHERRACK.getId());
 							}
-							else if(islandType == Biome.SMALL_MOUNTAINS)
+							else if(islandType == Biome.SMALLER_EXTREME_HILLS)
 							{
 								if(getBlock(world, blockX, blockY, blockZ) != Material.ENDER_PORTAL_FRAME.getId())
 									setBlock(world, blockX, blockY, blockZ, Material.ENDER_STONE.getId());
@@ -2096,7 +2110,7 @@ public class IslePopulator extends BlockPopulator
 			if(rand.nextBoolean()) points.add(mid);
 			if(rand.nextBoolean()) points.add(end);
 		}
-		if(!flatIsland && islandType != Biome.EXTREME_HILLS && islandType != Biome.MUSHROOM_ISLAND && islandType != Biome.SMALL_MOUNTAINS && islandType != Biome.OCEAN)
+		if(!flatIsland && islandType != Biome.EXTREME_HILLS && islandType != Biome.MUSHROOM_ISLAND && islandType != Biome.SMALLER_EXTREME_HILLS && islandType != Biome.OCEAN)
 		{
 			if(rand.nextDouble() < IslandWorldGeneration.dungeonChance)
 			{
@@ -2115,11 +2129,12 @@ public class IslePopulator extends BlockPopulator
 		}
 		while(chunksToReload.size() > 0)
 		{
-			net.minecraft.server.v1_8_R3.Chunk c = chunksToReload.remove(0);
+			net.minecraft.server.v1_9_R2.Chunk c = chunksToReload.remove(0);
 			c.initLighting();
 			Iterator<Player> players = world.getPlayers().iterator();
 			while(players.hasNext())
 			{
+				// TODO: FIX?
 				sendChunkToClient(c.bukkitChunk, players.next());
 			}
 		}

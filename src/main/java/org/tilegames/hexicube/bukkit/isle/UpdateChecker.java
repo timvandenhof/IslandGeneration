@@ -56,7 +56,6 @@ public class UpdateChecker implements Runnable
 		}
 	}
 	
-	@Override
 	public void run()
 	{
 		try

@@ -4,10 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import net.minecraft.server.v1_8_R3.BlockPosition;
-import net.minecraft.server.v1_8_R3.NBTTagCompound;
-import net.minecraft.server.v1_8_R3.TileEntity;
-import net.minecraft.server.v1_8_R3.TileEntityChest;
+import net.minecraft.server.v1_9_R2.BlockPosition;
+import net.minecraft.server.v1_9_R2.NBTTagCompound;
+import net.minecraft.server.v1_9_R2.TileEntity;
+import net.minecraft.server.v1_9_R2.TileEntityChest;
 
 import org.bukkit.World;
 import org.tilegames.hexicube.nbtreader.*;
@@ -217,7 +217,7 @@ public class Schematic
 			{
 				TileEntity t = blockStates.get(a);
 				NBTTagCompound data = new NBTTagCompound();
-				t.b(data);
+				t.save(data);
 				t = TileEntity.c(data);
 				t.a(new BlockPosition(x, y, z));
 				populator.addTileEntity(world, t);
