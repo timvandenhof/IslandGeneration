@@ -176,7 +176,6 @@ public class IslePopulator extends BlockPopulator
 		{
 			/* Added by NL_Tim for debugging purposes */
 			e.printStackTrace();
-			System.exit(0);
 			/*end*/
 			
 			return new ChunkSection(y >> 4 << 4, true); //TODO: feed proper flag
@@ -237,7 +236,6 @@ public class IslePopulator extends BlockPopulator
 							catch(IndexOutOfBoundsException e){
 								/* Added by NL_Tim for debugging purposes */
 								e.printStackTrace();
-								System.exit(0);
 							}
 						}
 					}
@@ -265,7 +263,7 @@ public class IslePopulator extends BlockPopulator
 						{
 							System.out.println("Unknown island type: "+islandType.toString());
 							@SuppressWarnings("unused")
-							int a = 0/0; // NL_Tim: WTF crash?
+							int a = 0/0; // Ugh...
 						}
 					}
 				}
@@ -280,7 +278,7 @@ public class IslePopulator extends BlockPopulator
 			Iterator<Player> players = world.getPlayers().iterator();
 			while(players.hasNext())
 			{
-				/* Experimental code by Microsenix and NL_Tim) */
+				/* Experimental code by Microsenix and NL_Tim */
 				((CraftPlayer) players.next()).getHandle().playerConnection.sendPacket(new PacketPlayOutMapChunk(c, 20));
 				Bukkit.broadcastMessage("ChunkUpdate Called L->2119: " + c.toString());
 				Bukkit.broadcastMessage("X: " + c.locX * 16 + " | Z: " + c.locZ * 16);
